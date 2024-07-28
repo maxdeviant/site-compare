@@ -19,6 +19,20 @@ pub fn render_report(comparison: Comparison) -> Result<String> {
         }
     }
 
+    let css = r#"
+        .diff-remove {
+            display: block;
+            width: 100%;
+            background-color: #ffcccc;
+        }
+
+        .diff-add {
+            display: block;
+            width: 100%;
+            background-color: #ccffcc;
+        }
+    "#;
+
     let report_html =
         html()
             .lang("en")
@@ -31,7 +45,8 @@ pub fn render_report(comparison: Comparison) -> Result<String> {
                             .name("viewport")
                             .content("width=device-width, initial-scale=1.0, maximum-scale=1"),
                     )
-                    .child(title().child("Site Comparison")),
+                    .child(title().child("Site Comparison"))
+                    .child(style().child(css)),
             )
             .child(
                 body()
@@ -69,13 +84,17 @@ fn changed_file_diff(before: &str, after: &str) -> HtmlElement {
     let mut lines = Vec::new();
 
     for change in diff.iter_all_changes() {
-        let sign = match change.tag() {
-            ChangeTag::Delete => "-",
-            ChangeTag::Insert => "+",
-            ChangeTag::Equal => " ",
+        let (sign, class) = match change.tag() {
+            ChangeTag::Delete => ("-", Some("diff-remove")),
+            ChangeTag::Insert => ("+", Some("diff-add")),
+            ChangeTag::Equal => (" ", None),
         };
 
-        lines.push(escape_html(&format!("{sign}{change}")))
+        lines.push(
+            span()
+                .class::<&str>(class)
+                .child(escape_html(&format!("{sign}{change}"))),
+        )
     }
 
     pre().child(code().children(lines))
