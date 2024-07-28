@@ -6,3 +6,7 @@ publish = false
 
 [dependencies]
 anyhow.workspace = true
+env_logger.workspace = true
+log.workspace = true
+similar.workspace = true
+walkdir.workspace = true
