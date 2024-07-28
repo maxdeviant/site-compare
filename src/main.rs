@@ -1,3 +1,4 @@
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -7,6 +8,10 @@ fn main() -> Result<()> {
     let compare_dir = PathBuf::from(".compare");
     let before_dir = compare_dir.join("before");
     let after_dir = compare_dir.join("after");
+
+    for output_dir in [&before_dir, &after_dir] {
+        fs::remove_dir_all(output_dir)?;
+    }
 
     build_before_site(&before_dir).context("failed to build before site")?;
     build_after_site(&after_dir).context("failed to build after site")?;
