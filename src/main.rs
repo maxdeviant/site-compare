@@ -6,6 +6,7 @@ use std::process::Command;
 use std::{fs, io};
 
 use anyhow::{bail, Context, Result};
+use clap::Parser;
 use walkdir::WalkDir;
 
 use crate::report::render_report;
@@ -21,10 +22,19 @@ struct Comparison {
     pub differences: BTreeMap<String, Difference>,
 }
 
+#[derive(Parser)]
+struct Args {
+    /// Whether to open the report in the browser after running.
+    #[clap(long)]
+    open: bool,
+}
+
 fn main() -> Result<()> {
     env_logger::Builder::from_default_env()
         .filter_level(log::LevelFilter::Info)
         .init();
+
+    let args = Args::parse();
 
     let compare_dir = PathBuf::from(".compare");
     let before_dir = compare_dir.join("before");
@@ -68,7 +78,9 @@ fn main() -> Result<()> {
     fs::write(&report_path, report).context("failed to write report to file")?;
     log::info!("Report written to {:?}", report_path);
 
-    opener::open(report_path)?;
+    if args.open {
+        opener::open(report_path)?;
+    }
 
     Ok(())
 }
