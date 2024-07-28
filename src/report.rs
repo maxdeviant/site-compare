@@ -33,14 +33,20 @@ pub fn render_report(comparison: Comparison) -> Result<String> {
                 let mut lines = Vec::new();
 
                 for change in diff.iter_all_changes() {
+                    let is_blank_line = change.as_str().unwrap().trim().is_empty();
+
                     let (sign, class) = match change.tag() {
                         ChangeTag::Insert => {
                             lines_added += 1;
                             ("+", Some("diff-line diff-add"))
                         }
                         ChangeTag::Delete => {
-                            lines_removed += 1;
-                            ("-", Some("diff-line diff-remove"))
+                            if is_blank_line {
+                                ("~", Some("diff-line diff-blank-line"))
+                            } else {
+                                lines_removed += 1;
+                                ("-", Some("diff-line diff-remove"))
+                            }
                         }
                         ChangeTag::Equal => (" ", None),
                     };
@@ -78,6 +84,10 @@ pub fn render_report(comparison: Comparison) -> Result<String> {
 
         .diff-remove {
             background-color: #ffcccc;
+        }
+
+        .diff-blank-line {
+            background-color: #f0f0f0;
         }
     "#;
 
