@@ -1,11 +1,25 @@
+mod report;
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{fs, io};
 
 use anyhow::{bail, Context, Result};
-use similar::{ChangeTag, TextDiff};
 use walkdir::WalkDir;
+
+use crate::report::render_report;
+
+enum Difference {
+    Added,
+    Changed { before: String, after: String },
+    Removed,
+}
+
+struct Comparison {
+    pub identical: BTreeSet<String>,
+    pub differences: BTreeMap<String, Difference>,
+}
 
 fn main() -> Result<()> {
     env_logger::Builder::from_default_env()
@@ -45,36 +59,16 @@ fn main() -> Result<()> {
     let after_site = collect_files(&after_dir).context("failed to collect after site files")?;
 
     log::info!("Comparing before and after");
-    let (identical, differences) = compare_sites(before_site, after_site)?;
+    let comparison = compare_sites(before_site, after_site)?;
 
-    log::info!("{} files were identical", identical.len());
-    log::info!("{} files had differences", differences.len());
+    log::info!("Generating report");
+    let report = render_report(comparison).context("failed to render report")?;
 
-    for (path, difference) in differences {
-        match difference {
-            Difference::Added => {
-                log::info!("{path} was added");
-            }
-            Difference::Changed { before, after } => {
-                log::info!("{path} was changed:");
+    let report_path = compare_dir.join("report.html");
+    fs::write(&report_path, report).context("failed to write report to file")?;
+    log::info!("Report written to {:?}", report_path);
 
-                let diff = TextDiff::from_lines(&before, &after);
-
-                for change in diff.iter_all_changes() {
-                    let sign = match change.tag() {
-                        ChangeTag::Delete => "-",
-                        ChangeTag::Insert => "+",
-                        ChangeTag::Equal => " ",
-                    };
-
-                    print!("{sign}{change}");
-                }
-            }
-            Difference::Removed => {
-                log::info!("{path} was removed");
-            }
-        }
-    }
+    opener::open(report_path)?;
 
     Ok(())
 }
@@ -154,16 +148,10 @@ fn collect_files(dir: &Path) -> Result<BTreeMap<String, String>> {
     Ok(files)
 }
 
-enum Difference {
-    Added,
-    Changed { before: String, after: String },
-    Removed,
-}
-
 fn compare_sites(
     before: BTreeMap<String, String>,
     after: BTreeMap<String, String>,
-) -> Result<(BTreeSet<String>, BTreeMap<String, Difference>)> {
+) -> Result<Comparison> {
     let mut identical = BTreeSet::new();
     let mut differences = BTreeMap::new();
 
@@ -194,5 +182,8 @@ fn compare_sites(
         }
     }
 
-    Ok((identical, differences))
+    Ok(Comparison {
+        identical,
+        differences,
+    })
 }

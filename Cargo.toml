@@ -6,7 +6,10 @@ publish = false
 
 [dependencies]
 anyhow.workspace = true
+auk.workspace = true
 env_logger.workspace = true
 log.workspace = true
+opener.workspace = true
+pulldown-cmark.workspace = true
 similar.workspace = true
 walkdir.workspace = true
