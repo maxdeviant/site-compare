@@ -139,6 +139,7 @@ fn collect_files(dir: &Path) -> Result<BTreeMap<String, String>> {
             let contents = fs::read_to_string(&path)
                 .with_context(|| format!("failed to read to string: {path:?}"))?;
             let path = path.strip_prefix(dir)?.to_string_lossy().to_string();
+            let path = format!("/{path}");
 
             files.insert(path, contents);
         } else {
