@@ -1,9 +1,10 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{fs, io};
 
 use anyhow::{bail, Context, Result};
+use similar::{ChangeTag, TextDiff};
 use walkdir::WalkDir;
 
 fn main() -> Result<()> {
@@ -44,7 +45,36 @@ fn main() -> Result<()> {
     let after_site = collect_files(&after_dir).context("failed to collect after site files")?;
 
     log::info!("Comparing before and after");
-    compare_sites(before_site, after_site)?;
+    let (identical, differences) = compare_sites(before_site, after_site)?;
+
+    log::info!("{} files were identical", identical.len());
+    log::info!("{} files had differences", differences.len());
+
+    for (path, difference) in differences {
+        match difference {
+            Difference::Added => {
+                log::info!("{path} was added");
+            }
+            Difference::Changed { before, after } => {
+                log::info!("{path} was changed:");
+
+                let diff = TextDiff::from_lines(&before, &after);
+
+                for change in diff.iter_all_changes() {
+                    let sign = match change.tag() {
+                        ChangeTag::Delete => "-",
+                        ChangeTag::Insert => "+",
+                        ChangeTag::Equal => " ",
+                    };
+
+                    print!("{sign}{change}");
+                }
+            }
+            Difference::Removed => {
+                log::info!("{path} was removed");
+            }
+        }
+    }
 
     Ok(())
 }
@@ -124,32 +154,45 @@ fn collect_files(dir: &Path) -> Result<BTreeMap<String, String>> {
     Ok(files)
 }
 
-fn compare_sites(before: BTreeMap<String, String>, after: BTreeMap<String, String>) -> Result<()> {
-    let mut differences = Vec::new();
+enum Difference {
+    Added,
+    Changed { before: String, after: String },
+    Removed,
+}
 
-    // Find files in 'before' that are not in 'after' or that have different content.
+fn compare_sites(
+    before: BTreeMap<String, String>,
+    after: BTreeMap<String, String>,
+) -> Result<(BTreeSet<String>, BTreeMap<String, Difference>)> {
+    let mut identical = BTreeSet::new();
+    let mut differences = BTreeMap::new();
+
     for (path, before_content) in before.iter() {
         match after.get(path) {
-            Some(after_content) if after_content != before_content => {
-                differences.push(format!("Modified: {path}"));
+            Some(after_content) => {
+                if after_content != before_content {
+                    differences.insert(
+                        path.clone(),
+                        Difference::Changed {
+                            before: before_content.clone(),
+                            after: after_content.clone(),
+                        },
+                    );
+                } else {
+                    identical.insert(path.clone());
+                }
             }
             None => {
-                differences.push(format!("Removed: {path}"));
+                differences.insert(path.clone(), Difference::Removed);
             }
-            _ => {}
         }
     }
 
-    // Find files in 'after' that are not in 'before'.
     for path in after.keys() {
         if !before.contains_key(path) {
-            differences.push(format!("Added: {path}"));
+            differences.insert(path.clone(), Difference::Added);
         }
     }
 
-    for diff in differences {
-        println!("{}", diff);
-    }
-
-    Ok(())
+    Ok((identical, differences))
 }
