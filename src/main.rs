@@ -120,6 +120,9 @@ fn format_with_prettier(dir: &Path) -> Result<()> {
         // Since the comparison directory is ignored by Git, Prettier ignores it
         // too, unless we tell it otherwise.
         .arg("--ignore-path")
+        // Ignore whitespace sensitivity to produce better diffs.
+        // https://prettier.io/docs/en/options.html#html-whitespace-sensitivity
+        .args(["--html-whitespace-sensitivity", "ignore"])
         .status()?;
     if !status.success() {
         bail!("failed with status: {status}");
