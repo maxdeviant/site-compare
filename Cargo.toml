@@ -12,4 +12,5 @@ log.workspace = true
 opener.workspace = true
 pulldown-cmark.workspace = true
 similar.workspace = true
+slug.workspace = true
 walkdir.workspace = true
