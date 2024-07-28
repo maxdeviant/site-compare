@@ -72,25 +72,6 @@ pub fn render_report(comparison: Comparison) -> Result<String> {
         }
     }
 
-    let css = r#"
-        .diff-line {
-            display: block;
-            width: 100%;
-        }
-
-        .diff-add {
-            background-color: #ccffcc;
-        }
-
-        .diff-remove {
-            background-color: #ffcccc;
-        }
-
-        .diff-blank-line {
-            background-color: #f0f0f0;
-        }
-    "#;
-
     let report_html = html()
         .lang("en")
         .child(
@@ -103,39 +84,67 @@ pub fn render_report(comparison: Comparison) -> Result<String> {
                         .content("width=device-width, initial-scale=1.0, maximum-scale=1"),
                 )
                 .child(title().child("Site Comparison"))
-                .child(style().child(css)),
+                .child(style().child(include_str!("report.css"))),
         )
         .child(
             body()
+                .class("sans-serif lh-copy")
                 .child(h1().child("Comparison Report"))
                 .child(
-                    div().child(h2().child("Identical files")).child(
-                        ol().children(comparison.identical.iter().map(|path| li().child(path))),
-                    ),
-                )
-                .child(
                     div()
-                        .child(h2().child("Added files"))
-                        .child(ol().children(added.into_iter().map(|path| li().child(path)))),
+                        .child(h2().child("Identical files"))
+                        .child(ol().children(comparison.identical.iter().map(|path| {
+                            li().child(
+                                div()
+                                    .class("flex items-center gap1")
+                                    .child(code().child(path)),
+                            )
+                        }))),
                 )
+                .child(div().child(h2().child("Added files")).child(ol().children(
+                    added.into_iter().map(|path| {
+                        li().child(
+                            div()
+                                .class("flex items-center gap1")
+                                .child(code().child(path)),
+                        )
+                    }),
+                )))
                 .child(
                     div()
                         .child(h2().child("Removed files"))
-                        .child(ol().children(removed.into_iter().map(|path| li().child(path)))),
+                        .child(ol().children(removed.into_iter().map(|path| {
+                            li().child(
+                                div()
+                                    .class("flex items-center gap1")
+                                    .child(code().child(path)),
+                            )
+                        }))),
                 )
                 .child(
                     div()
                         .child(
-                            h2().child("Changed files")
+                            div()
+                                .class("flex items-center gap1")
+                                .child(h2().child("Changed files"))
                                 .child(diff_indicator(total_lines_added, total_lines_removed)),
                         )
                         .child(ol().children(changed.iter().map(|file| {
-                            li().child(&file.path)
-                                .child(
-                                    a().href(format!("#diff-{}", slugify(&file.path)))
-                                        .child("diff"),
-                                )
-                                .child(diff_indicator(file.lines_added, file.lines_removed))
+                            li().child(
+                                div()
+                                    .class("flex items-center gap1")
+                                    .child(code().child(&file.path))
+                                    .child(diff_indicator(file.lines_added, file.lines_removed))
+                                    .child(
+                                        span()
+                                            .child("(")
+                                            .child(
+                                                a().href(format!("#diff-{}", slugify(&file.path)))
+                                                    .child("diff"),
+                                            )
+                                            .child(")"),
+                                    ),
+                            )
                         }))),
                 )
                 .child(
@@ -144,12 +153,16 @@ pub fn render_report(comparison: Comparison) -> Result<String> {
                         .children(changed.into_iter().map(|file| {
                             div()
                                 .id(format!("diff-{}", slugify(&file.path)))
-                                .child(file.path)
                                 .child(
                                     div()
-                                        .child(diff_indicator(file.lines_added, file.lines_removed))
-                                        .child(pre().child(code().children(file.diff_lines))),
+                                        .class("flex items-center gap1")
+                                        .child(code().child(file.path))
+                                        .child(diff_indicator(
+                                            file.lines_added,
+                                            file.lines_removed,
+                                        )),
                                 )
+                                .child(pre().child(code().children(file.diff_lines)))
                         })),
                 ),
         );
@@ -157,15 +170,23 @@ pub fn render_report(comparison: Comparison) -> Result<String> {
     Ok(HtmlElementRenderer::new().render_to_string(&report_html)?)
 }
 
+fn diff_add_indicator(lines_added: i32) -> HtmlElement {
+    span()
+        .class("code diff-indicator diff-add")
+        .child(format!("+{lines_added}"))
+}
+
+fn diff_remove_indicator(lines_removed: i32) -> HtmlElement {
+    span()
+        .class("code diff-indicator diff-remove")
+        .child(format!("-{lines_removed}"))
+}
+
 fn diff_indicator(lines_added: i32, lines_removed: i32) -> HtmlElement {
     span()
-        .child(span().class("diff-add").child(format!("+{lines_added}")))
-        .child(span().child("&nbsp;"))
-        .child(
-            span()
-                .class("diff-remove")
-                .child(format!("-{lines_removed}")),
-        )
+        .class("flex gap1")
+        .child(diff_add_indicator(lines_added))
+        .child(diff_remove_indicator(lines_removed))
 }
 
 fn escape_html(text: &str) -> String {
