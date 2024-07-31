@@ -37,8 +37,10 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     let compare_dir = PathBuf::from(".compare");
-    let before_dir = compare_dir.join("before");
-    let after_dir = compare_dir.join("after");
+    let before_dirname = "before";
+    let after_dirname = "after";
+    let before_dir = compare_dir.join(before_dirname);
+    let after_dir = compare_dir.join(after_dirname);
     let both_dirs = [&before_dir, &after_dir];
 
     for output_dir in &both_dirs {
@@ -56,9 +58,11 @@ fn main() -> Result<()> {
     log::info!("Building after site");
     build_after_site(&after_dir).context("failed to build after site")?;
 
-    for output_dir in &both_dirs {
+    setup_prettier(&compare_dir).context("failed to setup Prettier")?;
+
+    for output_dir in [before_dirname, after_dirname] {
         log::info!("Formatting {output_dir:?} with Prettier");
-        format_with_prettier(output_dir)
+        format_with_prettier(&compare_dir, output_dir)
             .with_context(|| format!("failed to format {output_dir:?} with Prettier"))?;
     }
 
@@ -112,17 +116,50 @@ fn build_after_site(output_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-fn format_with_prettier(dir: &Path) -> Result<()> {
-    let status = Command::new("pnpm")
-        .arg("prettier")
-        .arg(dir)
+fn setup_prettier(work_dir: &Path) -> Result<()> {
+    if work_dir.join(".node_modules/prettier").exists() {
+        log::info!("found Prettier, skipping Prettier setup");
+        return Ok(());
+    }
+
+    let package_json = r#"
+    {
+        "devDependencies": {
+            "prettier": "3.3.3",
+            "@prettier/plugin-xml": "3.4.1"
+        }
+    }
+    "#;
+
+    // Ignore whitespace sensitivity to produce better diffs.
+    // https://prettier.io/docs/en/options.html#html-whitespace-sensitivity
+    let prettierrc = r#"
+    {
+        "plugins": ["@prettier/plugin-xml"],
+        "htmlWhitespaceSensitivity": "ignore",
+        "xmlWhitespaceSensitivity": "ignore"
+    }
+    "#;
+
+    fs::write(work_dir.join("package.json"), package_json)?;
+    fs::write(work_dir.join(".prettierrc"), prettierrc)?;
+
+    let pnpm_install_status = Command::new("pnpm")
+        .arg("install")
+        .current_dir(work_dir)
+        .status()?;
+    if !pnpm_install_status.success() {
+        bail!("pnpm install failed with status: {pnpm_install_status}");
+    }
+
+    Ok(())
+}
+
+fn format_with_prettier(prettier_dir: &Path, dirname: &str) -> Result<()> {
+    let status = Command::new("node_modules/.bin/prettier")
+        .arg(dirname)
         .arg("--write")
-        // Since the comparison directory is ignored by Git, Prettier ignores it
-        // too, unless we tell it otherwise.
-        .arg("--ignore-path")
-        // Ignore whitespace sensitivity to produce better diffs.
-        // https://prettier.io/docs/en/options.html#html-whitespace-sensitivity
-        .args(["--html-whitespace-sensitivity", "ignore"])
+        .current_dir(prettier_dir)
         .status()?;
     if !status.success() {
         bail!("failed with status: {status}");
