@@ -98,7 +98,7 @@ pub fn render_report(comparison: Comparison) -> Result<String> {
                 .child(h1().child("Comparison Report"))
                 .child(
                     div()
-                        .child(h2().child("Identical files"))
+                        .child(h2().child(format!("Identical files ({})", identical.len())))
                         .child(ol().children(identical.iter().map(|path| {
                             li().child(
                                 div()
@@ -107,18 +107,20 @@ pub fn render_report(comparison: Comparison) -> Result<String> {
                             )
                         }))),
                 )
-                .child(div().child(h2().child("Added files")).child(ol().children(
-                    added.into_iter().map(|path| {
-                        li().child(
-                            div()
-                                .class("flex items-center gap1")
-                                .child(code().child(path)),
-                        )
-                    }),
-                )))
                 .child(
                     div()
-                        .child(h2().child("Removed files"))
+                        .child(h2().child(format!("Added files ({})", added.len())))
+                        .child(ol().children(added.into_iter().map(|path| {
+                            li().child(
+                                div()
+                                    .class("flex items-center gap1")
+                                    .child(code().child(path)),
+                            )
+                        }))),
+                )
+                .child(
+                    div()
+                        .child(h2().child(format!("Removed files ({})", removed.len())))
                         .child(ol().children(removed.into_iter().map(|path| {
                             li().child(
                                 div()
@@ -132,7 +134,7 @@ pub fn render_report(comparison: Comparison) -> Result<String> {
                         .child(
                             div()
                                 .class("flex items-center gap1")
-                                .child(h2().child("Changed files"))
+                                .child(h2().child(format!("Changed files ({})", changed.len())))
                                 .child(diff_indicator(total_lines_added, total_lines_removed)),
                         )
                         .child(ol().children(changed.iter().map(|file| {
