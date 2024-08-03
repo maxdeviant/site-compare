@@ -15,6 +15,7 @@ struct ChangedFile {
 }
 
 pub fn render_report(comparison: Comparison) -> Result<String> {
+    let mut identical = comparison.identical;
     let mut added = Vec::new();
     let mut changed = Vec::new();
     let mut removed = Vec::new();
@@ -58,6 +59,11 @@ pub fn render_report(comparison: Comparison) -> Result<String> {
                     )
                 }
 
+                if lines_added == 0 && lines_removed == 0 {
+                    identical.insert(path.clone());
+                    continue;
+                }
+
                 total_lines_added += lines_added;
                 total_lines_removed += lines_removed;
 
@@ -93,7 +99,7 @@ pub fn render_report(comparison: Comparison) -> Result<String> {
                 .child(
                     div()
                         .child(h2().child("Identical files"))
-                        .child(ol().children(comparison.identical.iter().map(|path| {
+                        .child(ol().children(identical.iter().map(|path| {
                             li().child(
                                 div()
                                     .class("flex items-center gap1")
