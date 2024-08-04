@@ -77,3 +77,26 @@ a:visited {
 .diff-blank-line {
   background-color: #f0f0f0;
 }
+
+.progress-container {
+  position: relative;
+  width: 100%;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  margin: 20px 0;
+}
+
+.progress-bar {
+  height: 24px;
+  background-color: #4caf50;
+  border-radius: 4px;
+}
+
+.progress-text {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 100%;
+  text-align: center;
+  font-weight: bold;
+}

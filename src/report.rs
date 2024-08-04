@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use anyhow::Result;
 use auk::renderer::HtmlElementRenderer;
 use auk::*;
@@ -78,6 +80,12 @@ pub fn render_report(comparison: Comparison) -> Result<String> {
         }
     }
 
+    let percent_similar = {
+        let identical_files = identical.len();
+        let total_files = identical_files + added.len() + changed.len() + removed.len();
+        ((identical_files as f64 / total_files as f64) * 100.0).round() as u32
+    };
+
     let report_html = html()
         .lang("en")
         .child(
@@ -96,6 +104,20 @@ pub fn render_report(comparison: Comparison) -> Result<String> {
             body()
                 .class("sans-serif lh-copy")
                 .child(h1().child("Comparison Report"))
+                .child(
+                    div()
+                        .class("progress-container")
+                        .child(
+                            div()
+                                .class("progress-bar")
+                                .style(format!("width: {percent_similar}%")),
+                        )
+                        .child(
+                            span()
+                                .class("progress-text")
+                                .child(format!("{percent_similar}% Similar")),
+                        ),
+                )
                 .child(
                     div()
                         .child(h2().child(format!("Identical files ({})", identical.len())))
