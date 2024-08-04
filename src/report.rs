@@ -36,14 +36,27 @@ pub fn render_report(comparison: Comparison) -> Result<String> {
                 for change in diff.iter_all_changes() {
                     let is_blank_line = change.as_str().unwrap().trim().is_empty();
 
+                    let is_atom_generator = {
+                        let change = change.as_str().unwrap();
+
+                        change.contains("https://www.getzola.org")
+                            || change.contains("https://github.com/maxdeviant/razorbill")
+                    };
+
                     let (sign, class) = match change.tag() {
                         ChangeTag::Insert => {
-                            lines_added += 1;
-                            ("+", Some("diff-line diff-add"))
+                            if is_atom_generator {
+                                (">", Some("diff-line diff-blank-line"))
+                            } else {
+                                lines_added += 1;
+                                ("+", Some("diff-line diff-add"))
+                            }
                         }
                         ChangeTag::Delete => {
                             if is_blank_line {
                                 ("~", Some("diff-line diff-blank-line"))
+                            } else if is_atom_generator {
+                                ("<", Some("diff-line diff-blank-line"))
                             } else {
                                 lines_removed += 1;
                                 ("-", Some("diff-line diff-remove"))
