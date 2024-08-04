@@ -1,5 +1,3 @@
-use std::collections::BTreeSet;
-
 use anyhow::Result;
 use auk::renderer::HtmlElementRenderer;
 use auk::*;
