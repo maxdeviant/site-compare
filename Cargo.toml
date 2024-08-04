@@ -5,13 +5,13 @@ edition = "2021"
 publish = false
 
 [dependencies]
-anyhow.workspace = true
-auk.workspace = true
-clap = { workspace = true, features = ["derive"] }
-env_logger.workspace = true
-log.workspace = true
-opener.workspace = true
-pulldown-cmark.workspace = true
-similar.workspace = true
-slug.workspace = true
-walkdir.workspace = true
+anyhow = "1.0.79"
+auk = { git = "https://github.com/maxdeviant/auk.git", rev = "75692c2ea294b6eb3dea8cda4df7ac7b8748cdff" }
+clap = { version = "4.4.14", features = ["derive"] }
+env_logger = "0.11.5"
+log = "0.4.22"
+opener = "0.7.1"
+pulldown-cmark = { version = "0.9.3", default-features = false }
+similar = "2.6.0"
+slug = "0.1.5"
+walkdir = "2.5.0"
